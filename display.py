@@ -53,6 +53,20 @@ def get_wav_data(fname):
     f.close()
     return sound_info, frrate
 
+from tkinter import filedialog as fd
+def open_wav():
+    path = fd.askopenfilename(
+        initialdir='/users/samlerner/documents/samples',
+        title='Select a WAV File', filetypes=[('WAV files', '*.wav')])
+    
+    global wav, fr
+    wav, fr = get_wav_data(path)
+
+    global w, h
+    clear_img()
+    draw_wav(wav[:,0], img, fr)
+    set_img(img)
+
 '''
 Draw an array of wav data onto a numpy array
 
@@ -86,19 +100,25 @@ def draw_wav(wav, img, fr, s=0., e=3.5):
     #print(i*fr_per_samp)
 
 '''
+Update the numpy array being shown in the tkinter window
+'''
+def set_img(arr):
+    global tkImg, canvasImg, canvas
+    tkImg = tk_img(arr)
+    canvasImg = tk_imshow(canvas, tkImg)
+
+def clear_img():
+    global img, h, w
+    img = np.ones((h, w), np.uint8)*255
+
+'''
 Play the audio from a given starting point when the window is clicked
 
-event - the opencv event code. only do anything if EVENT_LBUTTONUP
-x, y - coordinates of event
-flag, params - opencv things we don't need but opencv will complain without them
+event - the tkinter event
 '''
-#def play(event, x, y, flags, params):
-    #if not event == cv.EVENT_LBUTTONUP:
-    #    return
 def play(event):
     x, y = event.x, event.y
 
-    global canvas, canvasImg, tkImg
     global wav, fr
     global playing, pos_drawer
     global img
@@ -116,9 +136,6 @@ def play(event):
 
         y1, y2 = prev_y
         cv.line(img, (prev_x, y1), (prev_x, y2), (0, 0, 0), 2)
-        
-        tkImg = tk_img(img)
-        canvasImg = tk_imshow(canvas, tkImg)
 
         playing = False
         sd.stop() # stop playing if we are about to play from a different position
@@ -144,11 +161,7 @@ def play(event):
 
     # draw the line showing where we're playing from
     cv.line(img, (x, 0), (x, h), (0, 0, 0), 2)
-
-    #tkImg = tk_img(img)
-    #canvas.itemconfig(canvasImg, image=tkImg)
-    tkImg = tk_img(img)
-    canvasImg = tk_imshow(canvas, tkImg)
+    set_img(img)
 
 # Get the filename and load the waveform (along with the frame rate)
 fname = sys.argv[1]
@@ -172,27 +185,6 @@ draw_wav(wav[:,0], img, fr)
 from pos_util import PosDrawer
 pos_drawer = PosDrawer(fr, fr_per_samp, h)
 
-#cv.namedWindow('Window')
-#cv.setMouseCallback('Window', play)
-
-#cv.createTrackbar('Start', 'Window', 0, )
-
-space_kc = 32
-exit_kc = 27
-
-'''
-while 1:
-    cv.imshow('Window', img)
-    k = cv.waitKey(1)
-
-    if k == exit:
-        break
-    elif k == space_kc:
-        sd.stop()
-
-cv.destroyAllWindows()    
-'''
-
 window = tk.Tk()
 
 canvas = tk.Canvas(window, width=w, height=h)
@@ -200,7 +192,13 @@ canvas.bind('<Button-1>', play)
 canvas.pack()
 
 from tk_util import *
+
+# tkImg, canvasImg, and canvas all need to be globally accessed everywhere.
+# otherwise tkinter will flip out.
 tkImg = tk_img(img)
 canvasImg = tk_imshow(canvas, tkImg)
+
+btn = tk.Button(window, text='Open File', command=open_wav)
+btn.pack(side='bottom', fill='both', expand='yes', padx='10', pady='10')
 
 window.mainloop()
