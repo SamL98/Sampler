@@ -1,1 +1,1 @@
-python p223.py display.py test.wav
+python p223.py main.py test.wav

@@ -1,60 +1,19 @@
 import sys
 import threading
 
-from numpy import fromstring
-from numpy import iinfo, int16
 import numpy as np
-
 import sounddevice as sd
-from scipy.io.wavfile import write
-import wave
 
 import cv2 as cv
 import tkinter as tk
-
-'''
-Clip an array of wav data from s1 to s2 seconds
-
-a - The array of sound values
-s1 - the start (in seconds)
-s2 - the end (in seconds)
-'''
-def zoom(a, s1, s2, fr):
-    start_i = int(s1 * fr)
-    end_i = int(s2 * fr)
-    return a[start_i:end_i]
-
-'''
-Amplify the volume of an array of wav data my a multiplier
-
-m - multiplier of amplitude
-'''
-def change_volume(a, m):
-    assert a.ndim == 2
-    for i, row in enumerate(a):
-        for j, val in enumerate(row):
-            a[i, j] = min(val * m, iinfo(a.dtype).max)
-    return a
-
-'''
-Get an array of wav data from a given .wav file.
-Return the frame rate also.
-
-fname - path of the .wav file
-'''
-def get_wav_data(fname):
-    f = wave.open(fname, 'r')
-
-    sound_info = f.readframes(-1)
-    sound_info = fromstring(sound_info, np.int16)
-    sound_info = sound_info.reshape(len(sound_info)//2, 2)
-    frrate = f.getframerate()
-
-    f.close()
-    return sound_info, frrate
-
 from tkinter import filedialog as fd
+
+from tk_util import *
+from wav_util import *
+from pos_util import *
+
 def open_wav():
+    """ Prompt the user to select a wav file, open, and display the waveform. """
     path = fd.askopenfilename(
         initialdir='/users/samlerner/documents/samples',
         title='Select a WAV File', filetypes=[('WAV files', '*.wav')])
@@ -67,15 +26,21 @@ def open_wav():
     draw_wav(wav[:,0], img, fr)
     set_img(img)
 
-'''
-Draw an array of wav data onto a numpy array
-
-wav - wav data (np.ndarray)
-img - canvas image (np.ndarray)
-s - first time of the clip to display
-e - last time of the clip to display
-'''
 def draw_wav(wav, img, fr, s=0., e=3.5):
+    """
+    Draw an array of wav data onto a numpy array. Given a width per sample, an offset, and a padding,
+    the number of frames per sample can be calculated as:
+
+        number_of_frames / number_of_samples
+
+    where number_of_frames is the time_interval * frame_rate, or the number of frames to be displayed
+    and number_of_samples is the width / (padding + sample_width), or the number of samples that can be fit on the canvas
+
+    :param wav: wav data (np.ndarray)
+    :param img: canvas image (np.ndarray)
+    :param s: first time (seconds) of the clip to display
+    :param e: last time (seconds) of the clip to display
+    """
     h, w = img.shape # dimensions of the canvas
     padding = 2 # number of pixels between samples
     offset = padding # initial offset for drawing
@@ -96,27 +61,27 @@ def draw_wav(wav, img, fr, s=0., e=3.5):
         cv.line(img, (x, h//2), (x, y1), (0, 0, 0), w_per_samp)
         cv.line(img, (x, h//2), (x, y2), (0, 0, 0), w_per_samp)
 
-    #print(fr, fr_per_samp, num_samp)
-    #print(i*fr_per_samp)
-
-'''
-Update the numpy array being shown in the tkinter window
-'''
 def set_img(arr):
+    """ 
+    Set the image of the tkinter Canvas to the given numpy array
+
+    :param arr: the numpy array to display
+    """
     global tkImg, canvasImg, canvas
     tkImg = tk_img(arr)
     canvasImg = tk_imshow(canvas, tkImg)
 
 def clear_img():
+    """ Reset the canvas image to its original state (all white). """
     global img, h, w
     img = np.ones((h, w), np.uint8)*255
 
-'''
-Play the audio from a given starting point when the window is clicked
-
-event - the tkinter event
-'''
 def play(event):
+    """
+    Play the audio from a given starting point when the window is clicked.
+
+    :param event: the tkinter event
+    """
     x, y = event.x, event.y
 
     global wav, fr
@@ -181,8 +146,6 @@ img = np.ones((h, w), np.uint8)*255
 
 # Create the waveform display on the canvas and imshow it
 draw_wav(wav[:,0], img, fr)
-
-from pos_util import PosDrawer
 pos_drawer = PosDrawer(fr, fr_per_samp, h)
 
 window = tk.Tk()
@@ -190,8 +153,6 @@ window = tk.Tk()
 canvas = tk.Canvas(window, width=w, height=h)
 canvas.bind('<Button-1>', play)
 canvas.pack()
-
-from tk_util import *
 
 # tkImg, canvasImg, and canvas all need to be globally accessed everywhere.
 # otherwise tkinter will flip out.
