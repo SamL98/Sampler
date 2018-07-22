@@ -29,12 +29,14 @@ def open_wav():
 def draw_wav(wav, img, fr, s=0., e=3.5):
     """
     Draw an array of wav data onto a numpy array. Given a width per sample, an offset, and a padding,
-    the number of frames per sample can be calculated as:
+    the number of frames per sample (fr_per_samp) can be calculated as:
 
         number_of_frames / number_of_samples
 
     where number_of_frames is the time_interval * frame_rate, or the number of frames to be displayed
     and number_of_samples is the width / (padding + sample_width), or the number of samples that can be fit on the canvas
+
+    The mean of all fr_per_samp is then used to compute the height for that sample.
 
     :param wav: wav data (np.ndarray)
     :param img: canvas image (np.ndarray)
@@ -141,7 +143,7 @@ fr_per_samp = 0
 prev_x = None
 prev_y = (None, None)
 
-w, h = 1000, 300
+w, h = 850, 275
 img = np.ones((h, w), np.uint8)*255
 
 # Create the waveform display on the canvas and imshow it
